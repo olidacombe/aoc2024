@@ -57,72 +57,64 @@ impl Levels {
     }
 
     fn safe(&self) -> bool {
-        let tester = LevelsTester::new(&self.0);
-        tester.test().into()
+        let mut tester = LevelsTester::new(&self.0);
+        tester.any(|test| test)
     }
 }
 
-enum LevelsTester<'a> {
-    FirstRound(&'a [u64]),
-    SecondRound(&'a [u64]),
-    Failed,
+#[derive(Debug)]
+struct LevelsTester<'a> {
+    levels: &'a [u64],
+    skip_index: usize,
 }
 
 impl<'a> LevelsTester<'a> {
     fn new(levels: &'a [u64]) -> Self {
-        Self::FirstRound(levels)
-    }
-
-    fn failed(self, idx: usize) -> Self {
-        // TODO
-        // edge cases:
-        // - if we fail at idx==0, then omitting 0th _or_ 1st element might fix it
-        // so in this case, iterate backwards (add FirstRoundReverse variant)
-        // - if we fail at penultimate idx, do the same?
-        // (computationally inefficient but re-use efficient)
-        if let Self::FirstRound(levels) = self {
-            return Self::SecondRound(&levels[idx..]);
+        Self {
+            levels,
+            skip_index: 0,
         }
-        Self::Failed
     }
 
-    fn test(self) -> Self {
-        if let Self::FirstRound(levels) | Self::SecondRound(levels) = self {
-            let mut it: Box<dyn Iterator<Item = (usize, &u64)>> =
-                Box::new(levels.iter().enumerate());
-            if let Self::SecondRound(_) = self {
-                it = Box::new(it.filter(|(idx, _)| *idx != 1));
+    fn test(&self) -> bool {
+        let it = self.levels.iter().enumerate().filter_map(|(idx, level)| {
+            if idx != self.skip_index {
+                Some(level)
+            } else {
+                None
             }
-            let direction = OnceCell::<Direction>::new();
-            for ((idx, prev), (_, next)) in it.tuple_windows() {
-                match *next as i64 - *prev as i64 {
-                    1..=3 => {
-                        if *direction.get_or_init(|| Direction::Increasing) != Direction::Increasing
-                        {
-                            return self.failed(idx);
-                        }
-                    }
-                    -3..=-1 => {
-                        if *direction.get_or_init(|| Direction::Decreasing) != Direction::Decreasing
-                        {
-                            return self.failed(idx);
-                        }
-                    }
-                    _ => {
-                        return self.failed(idx);
+        });
+        let direction = OnceCell::<Direction>::new();
+        for (prev, next) in it.tuple_windows() {
+            match *next as i64 - *prev as i64 {
+                1..=3 => {
+                    if *direction.get_or_init(|| Direction::Increasing) != Direction::Increasing {
+                        return false;
                     }
                 }
+                -3..=-1 => {
+                    if *direction.get_or_init(|| Direction::Decreasing) != Direction::Decreasing {
+                        return false;
+                    }
+                }
+                _ => {
+                    return false;
+                }
             }
-            self
-        } else {
-            self
         }
+        true
     }
 }
 
-impl From<LevelsTester<'_>> for bool {
-    fn from(value: LevelsTester) -> Self {
-        !matches!(value, LevelsTester::Failed)
+impl Iterator for LevelsTester<'_> {
+    type Item = bool;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.skip_index >= self.levels.len() {
+            return None;
+        }
+        let ret = self.test();
+        self.skip_index += 1;
+        Some(ret)
     }
 }
 
