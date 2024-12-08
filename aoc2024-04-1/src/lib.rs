@@ -80,10 +80,10 @@ impl Xmas {
 impl PartialEq<char> for Xmas {
     fn eq(&self, other: &char) -> bool {
         match self {
-            Self::X => *other == 'x',
-            Self::M => *other == 'm',
-            Self::A => *other == 'a',
-            Self::S => *other == 's',
+            Self::X => *other == 'X',
+            Self::M => *other == 'M',
+            Self::A => *other == 'A',
+            Self::S => *other == 'S',
         }
     }
 }
@@ -157,10 +157,8 @@ impl Grid {
             directions.push(Direction::W);
             if *y > 2 {
                 directions.push(Direction::NW);
-                directions.push(Direction::N);
             }
             if *y < self.height() as i64 - 3 {
-                directions.push(Direction::S);
                 directions.push(Direction::SW);
             }
         }
@@ -168,12 +166,16 @@ impl Grid {
             directions.push(Direction::E);
             if *y > 2 {
                 directions.push(Direction::NE);
-                directions.push(Direction::N);
             }
             if *y < self.height() as i64 - 3 {
                 directions.push(Direction::SE);
-                directions.push(Direction::S);
             }
+        }
+        if *y > 2 {
+            directions.push(Direction::N);
+        }
+        if *y < self.height() as i64 - 3 {
+            directions.push(Direction::S);
         }
         directions
             .into_iter()
@@ -257,6 +259,48 @@ impl AddAssign<&Direction> for Coordinate {
 mod test {
     use super::*;
     use indoc::indoc;
+
+    #[test]
+    fn simple_east() -> Result<()> {
+        let example = indoc! {"
+            XMAS
+        "};
+        assert_eq!(num_xmas_hits(example.lines().map(String::from))?, 1);
+        Ok(())
+    }
+
+    #[test]
+    fn simple_west() -> Result<()> {
+        let example = indoc! {"
+            SAMX
+        "};
+        assert_eq!(num_xmas_hits(example.lines().map(String::from))?, 1);
+        Ok(())
+    }
+
+    #[test]
+    fn simple_south() -> Result<()> {
+        let example = indoc! {"
+            X
+            M
+            A
+            S
+        "};
+        assert_eq!(num_xmas_hits(example.lines().map(String::from))?, 1);
+        Ok(())
+    }
+
+    #[test]
+    fn simple_north() -> Result<()> {
+        let example = indoc! {"
+            S
+            A
+            M
+            X
+        "};
+        assert_eq!(num_xmas_hits(example.lines().map(String::from))?, 1);
+        Ok(())
+    }
 
     #[test]
     fn full_example() -> Result<()> {
