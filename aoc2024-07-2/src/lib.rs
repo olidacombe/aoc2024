@@ -57,10 +57,6 @@ fn order(num: u64) -> u64 {
     BASE.pow(num.log10() as u32 + 1)
 }
 
-fn concat(lhs: u64, rhs: u64) -> u64 {
-    order(lhs) * lhs + rhs
-}
-
 fn unconcat(lhs: u64, rhs: u64) -> u64 {
     lhs / order(rhs)
 }
@@ -146,11 +142,6 @@ mod test {
             156
         );
         Ok(())
-    }
-
-    #[test]
-    fn test_concat() {
-        assert_eq!(concat(123, 456), 123456);
     }
 
     #[test]

@@ -1,4 +1,4 @@
-use common::parse::{self, Parse};
+use common::parse::{self};
 use itertools::Itertools;
 use std::{
     collections::{HashMap, HashSet},
