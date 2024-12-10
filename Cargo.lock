@@ -137,6 +137,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "aoc2024-07-1"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "indoc",
+ "nom",
+ "thiserror",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "cfg-if"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
