@@ -1,6 +1,6 @@
-use std::{collections::HashSet, ops::Add};
-
 use common::parse::{self};
+use rayon::prelude::*;
+use std::{collections::HashSet, ops::Add};
 use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -24,7 +24,7 @@ pub fn num_loopy_obstruction_positions(it: impl Iterator<Item = String>) -> Resu
     };
 
     let maps = world.s_plus_one_obstacle(&position);
-    let guards = maps.iter().map(|map| Guard::new(map, position));
+    let guards = maps.par_iter().map(|map| Guard::new(map, position));
 
     Ok(guards
         .filter_map(|mut guard| if guard.loops() { Some(()) } else { None })
@@ -130,6 +130,9 @@ impl<'a> Guard<'a> {
                 ref mut direction,
             } = self.posmentum;
             let next = *position + direction;
+            if !self.map.covers(&next) {
+                return GuardState::Exited;
+            }
             if self.map.has_obstacle_at(&next) {
                 direction.turn_right();
                 *position = *position + direction;
@@ -137,14 +140,11 @@ impl<'a> Guard<'a> {
                 *position = next;
             }
         }
-        if self.seen_states.contains(&self.posmentum) {
+        if !self.seen_states.insert(self.posmentum) {
+            // true when already seen
             return GuardState::Looping;
         }
-        self.seen_states.insert(self.posmentum);
-        if self.map.covers(&self.posmentum.position) {
-            return GuardState::Patrolling;
-        }
-        GuardState::Exited
+        GuardState::Patrolling
     }
 }
 
