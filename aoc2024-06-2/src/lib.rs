@@ -1,6 +1,6 @@
 use common::parse::{self};
 use rayon::prelude::*;
-use std::{collections::HashSet, ops::Add};
+use std::{collections::HashSet, fmt::Display, ops::Add};
 use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -23,8 +23,17 @@ pub fn num_loopy_obstruction_positions(it: impl Iterator<Item = String>) -> Resu
         return Err(Error::MissingStartPosition);
     };
 
+    println!("{} obstacles", world.obstacles.len());
+    println!("{}x{} grid", world.width, world.height);
+    println!(
+        "{} possible obstacle locations",
+        world.width * world.height - world.obstacles.len() as i64 - 1
+    );
+
     let maps = world.s_plus_one_obstacle(&position);
+    println!("{} candidate maps", maps.len());
     let guards = maps.par_iter().map(|map| Guard::new(map, position));
+    // guards.for_each(|guard| assert!(guard.map.obstacles.len() == 811));
 
     Ok(guards
         .filter_map(|mut guard| if guard.loops() { Some(()) } else { None })
@@ -55,6 +64,12 @@ impl Direction {
 struct Position {
     x: i64,
     y: i64,
+}
+
+impl Display for Position {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{},{}", self.x, self.y)
+    }
 }
 
 impl Add<&Direction> for Position {
@@ -191,7 +206,10 @@ impl Map {
         (0..self.height)
             .flat_map(move |y| (0..self.width).map(move |x| Position { x, y }))
             .filter(|position| position != start_pos && !self.has_obstacle_at(position))
-            .map(|position| self + position)
+            .map(|position| {
+                // println!("{position}");
+                self + position
+            })
             .collect()
     }
 }
@@ -214,6 +232,29 @@ mod test {
             ........#.
             #.........
             ......#...
+        "};
+        assert_eq!(
+            num_loopy_obstruction_positions(example.lines().map(String::from))?,
+            6
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn full_example_plus() -> Result<()> {
+        let example = indoc! {"
+            ............
+            .....#......
+            ..........#.
+            ............
+            ...#........
+            ........#...
+            ............
+            ..#..^......
+            .........#..
+            .#..........
+            .......#....
+            ............
         "};
         assert_eq!(
             num_loopy_obstruction_positions(example.lines().map(String::from))?,
