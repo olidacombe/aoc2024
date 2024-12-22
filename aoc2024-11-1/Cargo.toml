@@ -1,0 +1,15 @@
+[package]
+name = "aoc2024-11-1"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+common = { path = "../common" }
+ilog = "1.0.1"
+nom = { workspace = true }
+thiserror.workspace = true
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[dev-dependencies]
+indoc = { workspace = true }
