@@ -1,9 +1,7 @@
 use std::collections::VecDeque;
 
-use cache_macro::cache;
 use common::parse::{self, Parse};
 use ilog::IntLog;
-use lru_cache::LruCache;
 use nom::{character::streaming::space1, multi::separated_list1};
 use thiserror::Error;
 
@@ -25,40 +23,25 @@ pub fn num_stones(input: &str, count: usize) -> Result<usize> {
 #[derive(Hash, Debug, Clone, PartialEq, Eq)]
 struct Stone(u64);
 
-#[cache(LruCache : LruCache::new(200000))]
-fn num_descendents_after(stone: Stone, n: usize) -> usize {
-    if n == 0 {
-        return 1;
-    }
-    stone
-        .mutate()
-        .0
-        .iter()
-        .map(|stone| stone.num_descendents_after(n - 1))
-        .sum()
-}
+type Cache = std::collections::HashMap<(Stone, usize), usize>;
 
 impl Stone {
-    fn num_descendents_after(&self, n: usize) -> usize {
+    fn num_descendents_after(self, n: usize, cache: &mut Cache) -> usize {
+        if let Some(answer) = cache.get(&(self.clone(), n)) {
+            return *answer;
+        }
         if n == 0 {
             return 1;
         }
-        self.clone()
-            .mutate()
-            .0
-            .iter()
-            .map(|stone| stone.num_descendents_after(n - 1))
-            .sum()
-    }
-
-    fn mutate(self) -> Stones {
-        if self.0 == 0 {
-            return Stones(VecDeque::from([Stone(1)]));
-        }
-        if let Some((left, right)) = self.split() {
-            return Stones(VecDeque::from([left, right]));
-        }
-        Stones(VecDeque::from([Stone(self.0 * 2024)]))
+        let ret = if self.0 == 0 {
+            Stone(1).num_descendents_after(n - 1, cache)
+        } else if let Some((left, right)) = self.split() {
+            left.num_descendents_after(n - 1, cache) + right.num_descendents_after(n - 1, cache)
+        } else {
+            Stone(self.0 * 2024).num_descendents_after(n - 1, cache)
+        };
+        cache.insert((self, n), ret);
+        ret
     }
 
     fn split(&self) -> Option<(Stone, Stone)> {
@@ -78,22 +61,11 @@ impl Stone {
 struct Stones(VecDeque<Stone>);
 
 impl Stones {
-    fn blink(&mut self) {
-        let mut new = VecDeque::new();
-        while let Some(stone) = self.0.pop_front() {
-            new.append(&mut stone.mutate().0);
-        }
-        self.0 = new;
-    }
-
-    fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    fn num_descendents_after(&self, n: usize) -> usize {
+    fn num_descendents_after(self, n: usize) -> usize {
+        let mut cache = Cache::default();
         self.0
-            .iter()
-            .map(|stone| stone.num_descendents_after(n))
+            .into_iter()
+            .map(|stone| stone.num_descendents_after(n, &mut cache))
             .sum()
     }
 }
