@@ -39,6 +39,8 @@ impl Vertex {
         let bottom_left = Vertex { x: *x, y: y + 1 };
         let bottom_right = Vertex { x: x + 1, y: y + 1 };
         [
+            // NOTE: this is the only place Edges are ever costructed,
+            // and we have strict ordering x0 <= x1, y0 <= y1
             Edge(top_left, top_right),
             Edge(top_left, bottom_left),
             Edge(top_right, bottom_right),
@@ -49,6 +51,66 @@ impl Vertex {
 
 #[derive(Eq, Clone, Copy)]
 struct Edge(Vertex, Vertex);
+
+#[derive(PartialEq)]
+enum EdgeOrientation {
+    Horizontal,
+    Vertical,
+}
+
+impl PartialOrd for EdgeOrientation {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match self {
+            EdgeOrientation::Horizontal => match other {
+                EdgeOrientation::Horizontal => Some(std::cmp::Ordering::Equal),
+                EdgeOrientation::Vertical => Some(std::cmp::Ordering::Greater),
+            },
+            EdgeOrientation::Vertical => match other {
+                EdgeOrientation::Horizontal => Some(std::cmp::Ordering::Less),
+                EdgeOrientation::Vertical => Some(std::cmp::Ordering::Equal),
+            },
+        }
+    }
+}
+
+impl Edge {
+    fn orientation(&self) -> EdgeOrientation {
+        let Edge(Vertex { x: x1, .. }, Vertex { x: x2, .. }) = self;
+        if x1 == x2 {
+            EdgeOrientation::Vertical
+        } else {
+            EdgeOrientation::Horizontal
+        }
+    }
+}
+
+impl PartialOrd for Edge {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        let orientation1 = self.orientation();
+        let orientation2 = other.orientation();
+        if orientation1 != orientation2 {
+            return orientation1.partial_cmp(&orientation2);
+        }
+        todo!("not what copilot suggested below");
+        // let Edge(v1, v2) = self;
+        // let Vertex { x: x1, y: y1 } = v1;
+        // let Vertex { x: x2, y: y2 } = v2;
+        // let Edge(v3, v4) = other;
+        // let Vertex { x: x3, y: y3 } = v3;
+        // let Vertex { x: x4, y: y4 } = v4;
+        // if x1 < x2 || x1 == x2 && y1 < y2 {
+        //     if x3 < x4 || x3 == x4 && y3 < y4 {
+        //         Some(std::cmp::Ordering::Equal)
+        //     } else {
+        //         Some(std::cmp::Ordering::Less)
+        //     }
+        // } else if x3 < x4 || x3 == x4 && y3 < y4 {
+        //     Some(std::cmp::Ordering::Greater)
+        // } else {
+        //     Some(std::cmp::Ordering::Equal)
+        // }
+    }
+}
 
 impl PartialEq for Edge {
     fn eq(&self, other: &Self) -> bool {
@@ -83,6 +145,13 @@ struct Region {
 impl Region {
     fn num_sides(&self) -> usize {
         todo!()
+        // general plan: find an ordering so we can iterate through edges with count 1 and
+        // only increment side count when we make an adjacency jump
+        // Order:
+        // 1. orientation (i.e. all horizontal edges first)
+        // 2. coordinate
+        //   a. y, then x (all y=0 in order of x, then y=1 in order of x, etc.) for horizontal
+        //   b. x, then y (all x=0 in order of y, then x=1 in order of y, etc.) for vertical
     }
 
     fn intersects(&self, edge: &Edge) -> bool {
