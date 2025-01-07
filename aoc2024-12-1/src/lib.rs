@@ -1,6 +1,6 @@
 use std::{collections::HashMap, hash::Hash, ops::AddAssign};
 
-use common::parse::{self, Parse};
+use common::parse::{self};
 use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -12,7 +12,17 @@ pub enum Error {
 }
 
 pub fn fence_price(it: impl Iterator<Item = String>) -> Result<u64> {
-    Ok(u64::default())
+    let mut partition = Partition::default();
+    for (row, line) in it.enumerate() {
+        for (col, crop) in line.chars().enumerate() {
+            let vertex = Vertex {
+                x: col as u64,
+                y: row as u64,
+            };
+            partition.push_plot(vertex, crop);
+        }
+    }
+    Ok(partition.total_price() as u64)
 }
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
@@ -76,7 +86,11 @@ impl Region {
     }
 
     fn intersects(&self, edge: &Edge) -> bool {
-        self.edges.contains_key(&edge)
+        self.edges.contains_key(edge)
+    }
+
+    fn price(&self) -> usize {
+        self.area * self.perimeter()
     }
 }
 
@@ -89,6 +103,7 @@ impl AddAssign for Region {
     }
 }
 
+#[derive(Default)]
 struct Partition(HashMap<char, Vec<Region>>);
 
 impl Partition {
@@ -118,12 +133,14 @@ impl Partition {
         }
         self.0.entry(crop).or_default().push(region);
     }
-}
 
-// TODO
-// every plot -> 4 edges.
-// Keep a partition of regions.
-// Note that a new plot may merge two exising regions.
+    fn total_price(&self) -> usize {
+        self.0
+            .values()
+            .map(|regions| regions.iter().map(Region::price).sum::<usize>())
+            .sum()
+    }
+}
 
 #[cfg(test)]
 mod test {
